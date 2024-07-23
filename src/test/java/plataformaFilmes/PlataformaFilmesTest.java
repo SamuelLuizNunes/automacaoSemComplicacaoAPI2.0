@@ -3,11 +3,18 @@ package plataformaFilmes;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.sql.PreparedStatement;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class PlataformaFilmesTest {
+
+    static String token;
 
     @Test
     public void validarLogin(){
@@ -20,20 +27,61 @@ public class PlataformaFilmesTest {
 
         Response response = post(json, ContentType.JSON, "auth");
 
-        String token = response.jsonPath().get("token");
+        token = response.jsonPath().get("token");
         System.out.println(token);
 
         assertEquals(200, response.statusCode());
     }
 
+    @BeforeAll
+    public static void validarLoginMap(){
+        RestAssured.baseURI = "http://localhost:8080/";
 
-    public Response post(Object body, ContentType contentType, String endpoint){
+        Map<String, String> map = new HashMap<>();
+        map.put("email", "aluno@email.com");
+        map.put("senha", "123456");
+
+        Response response = post(map, ContentType.JSON, "auth");
+
+        token = response.jsonPath().get("token");
+        System.out.println(token);
+
+        assertEquals(200, response.statusCode());
+    }
+
+    @Test
+    public void validarConsultaCategorias(){
+        Map<String, String> header = new HashMap<>();
+        header.put("Authorization", "Bearer " + token);
+        Response response = get(header, "categorias");
+
+        assertEquals(200, response.statusCode());
+
+        System.out.println(response.jsonPath().get().toString());
+
+
+    }
+
+    private static Response get(Map<String, String> header, String endpoint) {
+        return RestAssured.given()
+                .relaxedHTTPSValidation()
+                .headers(header)
+                .log().all()
+                .when()
+                .get(endpoint)
+                .then()
+                .log().all()
+                .extract().response();
+    }
+
+    public static Response post(Object json, ContentType contentType, String endpoint){
          return  RestAssured.given()
                 .relaxedHTTPSValidation()
                 .contentType(contentType)
-                .body(body)
+                .body(json)
                 .when()
                 .post(endpoint)
                 .thenReturn();
     }
+
 }
